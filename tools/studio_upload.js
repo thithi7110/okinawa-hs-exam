@@ -1,5 +1,5 @@
 // YouTube Studio のアップロード画面（.../videos/upload?d=ud）で javascript_tool から実行する。
-// latest ブランチの video.mp4 をファイル欄にセットし、タイトルと概要欄を入れる。
+// latest ブランチの video.mp4 をファイル欄にセットし、タイトル・概要欄・サムネイルを入れる。
 (async () => {
   const base = 'https://raw.githubusercontent.com/thithi7110/okinawa-hs-exam/latest/';
   const get = p => fetch(base + p, {cache: 'no-store'});
@@ -16,7 +16,19 @@
       const [title, desc] = await Promise.all(['title.txt', 'desc.txt'].map(p => get(p).then(r => r.text())));
       const set = (el, t) => { el.focus(); document.execCommand('selectAll'); document.execCommand('insertText', false, t.trim()); el.blur(); };
       set(boxes[0], title); set(boxes[1], desc);
-      return `OK size=${blob.size} title=${boxes[0].innerText.length} desc=${boxes[1].innerText.length}`;
+      // サムネイル。セットできなくても投稿は止めない（結果は thumb= で返す）
+      let thumb = 'none';
+      try {
+        const res = await get('thumbnail.png');
+        const ti = document.querySelector('ytcp-uploads-dialog input[type=file][accept*=image]');
+        if (res.ok && ti) {
+          const td = new DataTransfer();
+          td.items.add(new File([await res.blob()], `rika-ichimon-${date}.png`, {type: 'image/png'}));
+          ti.files = td.files; ti.dispatchEvent(new Event('change', {bubbles: true}));
+          thumb = 'set';
+        } else thumb = res.ok ? 'no_input' : 'no_file';
+      } catch (e) { thumb = 'error'; }
+      return `OK size=${blob.size} title=${boxes[0].innerText.length} desc=${boxes[1].innerText.length} thumb=${thumb}`;
     }
   }
   return 'DIALOG_TIMEOUT';

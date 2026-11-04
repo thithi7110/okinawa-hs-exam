@@ -1,7 +1,7 @@
 """理科 一問一答の動画を quiz.json から作る（沖縄県立高校入試対策）。
 
 使い方: python3 tools/build_quiz.py quiz.json OUTDIR
-出力: OUTDIR/video.mp4, OUTDIR/title.txt, OUTDIR/desc.txt, OUTDIR/frames/*.png
+出力: OUTDIR/video.mp4, OUTDIR/thumbnail.png, OUTDIR/title.txt, OUTDIR/desc.txt, OUTDIR/frames/*.png
 前提: tools/setup.sh 済み（VOICEVOX・Playwright・ffmpeg）
 
 quiz.json の形:
@@ -15,6 +15,7 @@ quiz.json の形:
   "title": "YouTubeタイトル（100字以内）",
   "intro": "概要欄の冒頭（1〜3行）",
   "hashtags": "#高校受験 #理科 ...",
+  "thumb": ["サムネのキーワード", "最大3個"],  # 省略時は title の（…）から作る
   "questions": [
     {"q": "画面の問題文", "qn": "読み上げる問題文",
      "a": "画面の答え（短く）", "an": "読み上げる答え＋一言解説（『答えは、〜。』で始める）",
@@ -29,6 +30,7 @@ import os, sys, html, json, wave, subprocess
 import pyopenjtalk
 from playwright.sync_api import sync_playwright
 from voicevox_core.blocking import Onnxruntime, OpenJtalk, Synthesizer, VoiceModelFile
+import thumbnail
 
 VV = os.environ.get("VV_DIR", "/home/claude/vv")
 Q_VOICE, A_VOICE = 3, 2      # 出題：ずんだもん / 答え：四国めたん
@@ -99,6 +101,7 @@ with sync_playwright() as p:
     shot("end", HEAD + f"<div class='wrap'><div class='no'>今日のまとめ</div><ul>{lis}</ul></div>"
                 + FOOT(f"入試まで あと {spec['days_left']} 日"))
     b.close()
+thumbnail.make(spec, f"{OUT}/thumbnail.png")
 
 # 2) 音声と動画
 ort = Onnxruntime.load_once(filename=f"{VV}/voicevox_onnxruntime-linux-x64-1.17.3/lib/libvoicevox_onnxruntime.so.1.17.3")
